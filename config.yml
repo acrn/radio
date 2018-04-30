@@ -1,11 +1,32 @@
 ---
-timezone: Europe/Stockholm
 
+schedule:
+
+  # Bedroom
+  # =======
+  - unit: bedroom_light
+    events:
+
+      - on: weekdays
+        but_not_on: fridays
+        turn_on:  '07:10'
+        turn_off: '08:00'
+
+      - on:
+          - fridays
+          - thursdays
+        turn_on:  '07:20'
+        turn_off: '08:10'
+
+      - on: weekends
+        turn_on:  '10:00'
+        turn_off: '12:00'
+
+timezone: Europe/Stockholm
 remotes:
   - 0x65a5a969659a9450
   # fake
   - 0x65a5a969659a9450
-
 protocol:
   on_code:  0x200
   off_code: 0x100
@@ -13,26 +34,11 @@ protocol:
     - 0x5
     - 0x6
     - 0x9
-
 units:
-
   bedroom_light:
     remote: 1
     i: 1
-
   study_light:
     remote: 2
     i: 1
-
-schedule:
-
-  - unit: bedroom_light
-    on:
-      - '07:00'
-      - '21:00'
-    off:
-      - '10:00'
-      - '22:00'
-    days:
-      - weekdays
 ...
