@@ -170,7 +170,7 @@ def disco(configfile, verbose=False):
             output = send(state.executable, code)
             print(output)
         except Exception as ex:
-            print('Event {}: {} failed'.format(unit_name, on))
+            print('Event {}: {} failed'.format(unit_name, unit_state))
             print(ex)
         unit_states[unit_name] = unit_state
         time.sleep(1)
@@ -199,5 +199,5 @@ if __name__ == '__main__':
         unit = config.units[args.unit_name]
         on = args.state in ['on', 1]
         code = unit.code(on=on)
-        output = send(code)
+        output = send(config.executable, code)
         print(output)
