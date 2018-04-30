@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 
 
-import datetime
-import yaml
-import pytz
 import collections
+import datetime
+import os
+import pytz
+import subprocess
+import sys
+import time
+import yaml
 
 
 class Unit():
@@ -50,19 +54,6 @@ def which_days(days=('all',), not_days=None):
 
     return days_
 
-class ScheduleEvent():
-
-    def __init__(self, unit_name, hour, minute, is_on=False, days=[]):
-        self.unit_name = unit_name
-
-        # hour_and_minute = lambda s: tuple(int(x) for x in s.split(':'))
-        # self.on = hour_and_minute(on)
-        # self.off = hour_and_minute(off)
-        self.hour = hour
-        self.minute = minute
-        self.is_on = is_on
-        self.days = days
-
 
 class State():
 
@@ -84,8 +75,8 @@ class State():
                               protocol)
         self.units = units
 
-        events = {}
-        hour_and_minute = lambda s: tuple(int(x) for x in s.split(':'))
+        events = collections.defaultdict(list)
+        hour_minute_and_second = lambda s: tuple(int(x) for x in (s+':00:00').split(':'))[:3]
         for unit_event in d['schedule']:
             unit_name = unit_event['unit']
 
@@ -105,14 +96,14 @@ class State():
                     offs = [offs]
                 for day in which_days(days, not_days):
                     for on in ons:
-                        hour, minute = hour_and_minute(on)
-                        events[(day,hour,minute)] = (unit_name, 1)
+                        hour, minute, second = hour_minute_and_second(on)
+                        events[(day,hour,minute,second)].append((unit_name, 1))
                     for off in offs:
-                        hour, minute = hour_and_minute(off)
-                        events[(day,hour,minute)] = (unit_name, 0)
+                        hour, minute, second = hour_minute_and_second(off)
+                        events[(day,hour,minute,second)].append((unit_name, 0))
 
-        self.events = events
-
+        self.events = dict(events)
+        self.executable = d['executable']
         self.timestamp = datetime.datetime.now()
 
 
@@ -120,3 +111,70 @@ def read_config(filename):
     with open(filename) as f:
         config_file = yaml.load(f)
     return State(config_file)
+
+
+def send(executable, code):
+    output = subprocess.check_output([
+        'echo',
+        executable,
+        'nexa',
+        hex(code),
+        ])
+    return output
+
+
+def daemonize(configfile, verbose=False):
+    print('Starting main loop')
+    state = read_config(configfile)
+    while True:
+        if os.stat(configfile).st_mtime > state.timestamp.timestamp():
+            if verbose:
+                print('Config file changed, rereading')
+            try:
+                state = read_config(configfile)
+            except Exception as ex:
+                print('Reading config failed')
+                print(ex)
+        now = datetime.datetime.now(state.timezone)
+        key = (now.weekday(), now.hour, now.minute, now.second)
+        events = state.events.get(key, [])
+        if verbose:
+            print('Events at {}: {}'.format(now.isoformat(), events))
+
+        for unit_name, on in events:
+            try:
+                unit = state.units[unit_name]
+                code = unit.code(on=on)
+                output = send(state.executable, code)
+                print(output)
+            except Exception as ex:
+                print('Event {}: {} failed'.format(unit_name, on))
+                print(ex)
+        sys.stdout.flush()
+        now = datetime.datetime.now(state.timezone)
+        if now.second == key[3]:
+            time.sleep(1.001 - now.microsecond / 1000000.0)
+
+
+def parse_args():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-D', '--daemonize', action='store_true')
+    parser.add_argument('-c', '--configfile', default='config.yml')
+    parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('unit_name', nargs='?')
+    parser.add_argument('state', nargs='?')
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = parse_args()
+    if args.daemonize:
+        daemonize(args.configfile, verbose=args.verbose)
+    elif args.unit_name and args.state:
+        config = read_config('config.yml')
+        unit = config.units[args.unit_name]
+        on = args.state in ['on', 1]
+        code = unit.code(on=on)
+        output = send(code)
+        print(output)

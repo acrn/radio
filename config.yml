@@ -9,7 +9,7 @@ schedule:
 
       - on: weekdays
         but_not_on: fridays
-        turn_on:  '07:10'
+        turn_on:  '16:25:50'
         turn_off: '08:00'
 
       - on:
@@ -19,10 +19,18 @@ schedule:
         turn_off: '08:10'
 
       - on: weekends
-        turn_on:  '10:00'
+        turn_on:  '16:00:10'
         turn_off: '12:00'
 
+  - unit: study_light
+    events:
+
+      - on: mondays
+        turn_on:  '07:10'
+        turn_off: '08:00'
+
 timezone: Europe/Stockholm
+executable: /opt/blink/blink
 remotes:
   - 0x65a5a969659a9450
   # fake
