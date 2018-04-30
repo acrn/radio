@@ -127,15 +127,15 @@ def daemonize(configfile, verbose=False):
     print('Starting main loop')
     state = read_config(configfile)
     while True:
-        if os.stat(configfile).st_mtime > state.timestamp.timestamp():
-            if verbose:
-                print('Config file changed, rereading')
-            try:
-                state = read_config(configfile)
-            except Exception as ex:
-                print('Reading config failed')
-                print(ex)
         now = datetime.datetime.now(state.timezone)
+        try:
+            if now.second % 10 == 3 and os.stat(configfile).st_mtime > state.timestamp.timestamp():
+                if verbose:
+                    print('Config file changed, rereading')
+                state = read_config(configfile)
+        except Exception as ex:
+            print('Reading config failed')
+            print(ex)
         key = (now.weekday(), now.hour, now.minute, now.second)
         events = state.events.get(key, [])
         if verbose:
@@ -156,10 +156,31 @@ def daemonize(configfile, verbose=False):
             time.sleep(1.001 - now.microsecond / 1000000.0)
 
 
+def disco(configfile, verbose=False):
+    import random
+    print('Starting main loop')
+    state = read_config(configfile)
+    unit_states = dict.fromkeys(state.units.keys(), False)
+    while True:
+        unit_name = random.choice(list(unit_states.keys()))
+        unit_state = not unit_states[unit_name]
+        try:
+            unit = state.units[unit_name]
+            code = unit.code(on=unit_state)
+            output = send(state.executable, code)
+            print(output)
+        except Exception as ex:
+            print('Event {}: {} failed'.format(unit_name, on))
+            print(ex)
+        unit_states[unit_name] = unit_state
+        time.sleep(1)
+
+
 def parse_args():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('-D', '--daemonize', action='store_true')
+    parser.add_argument('-d', '--disco', action='store_true')
     parser.add_argument('-c', '--configfile', default='config.yml')
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('unit_name', nargs='?')
@@ -171,6 +192,8 @@ if __name__ == '__main__':
     args = parse_args()
     if args.daemonize:
         daemonize(args.configfile, verbose=args.verbose)
+    elif args.disco:
+        disco(args.configfile, verbose=args.verbose)
     elif args.unit_name and args.state:
         config = read_config('config.yml')
         unit = config.units[args.unit_name]

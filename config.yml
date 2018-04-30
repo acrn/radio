@@ -1,5 +1,4 @@
 ---
-
 schedule:
 
   # Bedroom
@@ -22,6 +21,8 @@ schedule:
         turn_on:  '16:00:10'
         turn_off: '12:00'
 
+  # Study
+  # =====
   - unit: study_light
     events:
 
@@ -34,7 +35,7 @@ executable: /opt/blink/blink
 remotes:
   - 0x65a5a969659a9450
   # fake
-  - 0x65a5a969659a9450
+  - 0x44444969659a9450
 protocol:
   on_code:  0x200
   off_code: 0x100
