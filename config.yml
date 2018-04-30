@@ -1,0 +1,38 @@
+---
+timezone: Europe/Stockholm
+
+remotes:
+  - 0x65a5a969659a9450
+  # fake
+  - 0x65a5a969659a9450
+
+protocol:
+  on_code:  0x200
+  off_code: 0x100
+  unit_codes:
+    - 0x5
+    - 0x6
+    - 0x9
+
+units:
+
+  bedroom_light:
+    remote: 1
+    i: 1
+
+  study_light:
+    remote: 2
+    i: 1
+
+schedule:
+
+  - unit: bedroom_light
+    on:
+      - '07:00'
+      - '21:00'
+    off:
+      - '10:00'
+      - '22:00'
+    days:
+      - weekdays
+...
