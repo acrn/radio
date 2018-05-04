@@ -61,11 +61,10 @@ class State():
         self.remotes = remotes = d['remotes']
         self.timezone = pytz.timezone(d['timezone'])
 
-        protocol = collections.namedtuple('Protocol', ['on_code', 'off_code', 'unit_codes'])
+        Protocol = collections.namedtuple('Protocol', ['on_code', 'off_code', 'unit_codes'])
         p = d['protocol']
-        protocol = self.protocol = protocol(p['on_code'], p['off_code'], p['unit_codes'])
+        protocol = self.protocol = Protocol(p['on_code'], p['off_code'], p['unit_codes'])
 
-        unit = collections.namedtuple('Unit', ['name', 'remote', 'remote_code', 'i'])
         units = {}
         for key, value in d['units'].items():
             remote = value['remote']
@@ -74,6 +73,16 @@ class State():
                               value['i'],
                               protocol)
         self.units = units
+
+        vacation = set()
+        for vacation_row in d.get('vacation', []):
+            if type(vacation_row) == datetime.date:
+                vacation_row = [vacation_row, vacation_row]
+            start, end = vacation_row
+            for num in range((end - start).days + 1):
+                date = start + datetime.timedelta(days=num)
+                vacation.add((date.year, date.month, date.day))
+        self.vacation = vacation
 
         events = collections.defaultdict(list)
         hour_minute_and_second = lambda s: tuple(int(x) for x in (s+':00:00').split(':'))[:3]
@@ -124,36 +133,53 @@ def send(executable, code):
 
 
 def daemonize(configfile, verbose=False):
-    print('Starting main loop')
+
+    make_key = lambda d: (d.weekday(), d.hour, d.minute, d.second)
+    state_info = lambda s: 'Read {} events for {} units'.format(
+                            len(s.events),
+                            len(s.units))
+
     state = read_config(configfile)
+    last = datetime.datetime.now(state.timezone)
+    interval = 5
+
+    print(state_info(state))
+    print('Starting main loop', flush=True)
     while True:
         now = datetime.datetime.now(state.timezone)
-        try:
-            if now.second % 10 == 3 and os.stat(configfile).st_mtime > state.timestamp.timestamp():
-                if verbose:
-                    print('Config file changed, rereading')
-                state = read_config(configfile)
-        except Exception as ex:
-            print('Reading config failed')
-            print(ex)
-        key = (now.weekday(), now.hour, now.minute, now.second)
-        events = state.events.get(key, [])
-        if verbose:
-            print('Events at {}: {}'.format(now.isoformat(), events))
-
-        for unit_name, on in events:
+        if now.minute != last.minute:
             try:
-                unit = state.units[unit_name]
-                code = unit.code(on=on)
-                output = send(state.executable, code)
-                print(output)
+                if os.stat(configfile).st_mtime > state.timestamp.timestamp():
+                    print('Config file changed, rereading', flush=True)
+                    state = read_config(configfile)
+                    print(state_info(state), flush=True)
             except Exception as ex:
-                print('Event {}: {} failed'.format(unit_name, on))
-                print(ex)
-        sys.stdout.flush()
-        now = datetime.datetime.now(state.timezone)
-        if now.second == key[3]:
-            time.sleep(1.001 - now.microsecond / 1000000.0)
+                print('Reading config failed')
+                print(ex, flush=True)
+        keys = (make_key(last + datetime.timedelta(seconds=x))
+                for x in range((now - last).seconds))
+        for key in keys:
+            events = state.events.get(key)
+            if not events:
+                continue
+            if (now.year, now.month, now.day) in state.vacation:
+                print('Ignoring {} due to vacation'.format(events), flush=True)
+                continue
+            if verbose:
+                print('Events at {}: {}'.format(now.isoformat(), events), flush=True)
+
+            for unit_name, on in events:
+                try:
+                    unit = state.units[unit_name]
+                    code = unit.code(on=on)
+                    output = send(state.executable, code)
+                    print('Event: {}:{}, output: {}'.format(unit_name, on, output), flush=True)
+                except Exception as ex:
+                    print('Event {}: {} failed'.format(unit_name, on))
+                    print(ex, flush=True)
+                time.sleep(0.3)
+        last = now
+        time.sleep(interval)
 
 
 def disco(configfile, verbose=False):

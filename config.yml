@@ -7,9 +7,13 @@ schedule:
     events:
 
       - on: weekdays
-        but_not_on: fridays
-        turn_on:  '16:25:50'
-        turn_off: '08:00'
+        turn_on:
+          - '14:53'
+          - '15:00'
+          - '16:11'
+        turn_off:
+          - '08:00'
+          - '15:04'
 
       - on:
           - fridays
@@ -30,8 +34,11 @@ schedule:
         turn_on:  '07:10'
         turn_off: '08:00'
 
+vacation:
+  - 2018-06-06
+
 timezone: Europe/Stockholm
-executable: /opt/blink/blink
+executable: /bin/bleh
 remotes:
   - 0x65a5a969659a9450
   # fake
