@@ -124,7 +124,7 @@ def read_config(filename):
 
 def send(executable, code):
     output = subprocess.check_output([
-        'echo',
+        'sudo',
         executable,
         'nexa',
         hex(code),

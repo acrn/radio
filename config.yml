@@ -1,48 +1,37 @@
 ---
 schedule:
 
-  # Bedroom
+  # Kitchen
   # =======
-  - unit: bedroom_light
+  - unit: kitchen_window
     events:
 
       - on: weekdays
-        turn_on:
-          - '14:53'
-          - '15:00'
-          - '16:11'
-        turn_off:
-          - '08:00'
-          - '15:04'
+        turn_on:  '07:10'
+        turn_off: '07:56'
 
-      - on:
-          - fridays
-          - thursdays
-        turn_on:  '07:20'
-        turn_off: '08:10'
-
-      - on: weekends
-        turn_on:  '16:00:10'
-        turn_off: '12:00'
-
-  # Study
-  # =====
-  - unit: study_light
+  # Living room
+  # =======
+  - unit: living_room_window
     events:
 
-      - on: mondays
-        turn_on:  '07:10'
-        turn_off: '08:00'
+      - on: weekdays
+        turn_on:  '17:51'
+        turn_off: '21:52'
+
+      - on: weekends
+        turn_on:  '17:52'
+        turn_off: '22:53'
 
 vacation:
   - 2018-06-06
 
 timezone: Europe/Stockholm
-executable: /bin/bleh
+executable: /var/radio/bin/radio
 remotes:
   - 0x65a5a969659a9450
-  # fake
-  - 0x44444969659a9450
+  - 0x69a65a55565a9450
+  - 0x69a595aa559a9450
 protocol:
   on_code:  0x200
   off_code: 0x100
@@ -51,10 +40,10 @@ protocol:
     - 0x6
     - 0x9
 units:
-  bedroom_light:
-    remote: 1
-    i: 1
-  study_light:
+  kitchen_window:
     remote: 2
     i: 1
+  living_room_window:
+    remote: 2
+    i: 2
 ...
