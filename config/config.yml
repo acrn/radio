@@ -7,8 +7,16 @@ schedule:
     events:
 
       - on: weekdays
-        turn_on:  '07:10'
-        turn_off: '07:56'
+        turn_on:
+          - '07:00'
+          - '18:30'
+        turn_off:
+          - '08:00'
+          - '22:15'
+
+      - on: weekends
+        turn_on:  '18:30'
+        turn_off: '22:15'
 
   # Living room
   # =======
@@ -16,12 +24,47 @@ schedule:
     events:
 
       - on: weekdays
-        turn_on:  '17:51'
-        turn_off: '21:52'
+        turn_on:  '18:30'
+        turn_off: '23:00'
 
       - on: weekends
-        turn_on:  '17:52'
-        turn_off: '22:53'
+        turn_on:  '18:30'
+        turn_off: '23:30'
+
+  - unit: living_room_corner
+    events:
+
+      - on: weekdays
+        turn_on:  '18:30'
+        turn_off: '23:00'
+
+      - on: weekends
+        turn_on:  '18:30'
+        turn_off: '23:30'
+
+  - unit: hallway_lamp
+    events:
+
+      - on: weekdays
+        turn_on:  '18:30'
+        turn_off: '23:00'
+
+      - on: weekends
+        turn_on:  '18:30'
+        turn_off: '23:30'
+
+  - unit: bedside_lamp
+    events:
+
+      - on: weekdays
+        turn_on:  '06:55'
+        turn_off: '07:30'
+
+
+      - on: weekends
+        turn_on:  '09:00'
+        turn_off: '11:00'
+
 
 vacation:
   - 2018-06-06
