@@ -10,9 +10,11 @@ from flask import Flask, jsonify, request
 
 application = Flask(__name__)
 
-CONFIG_FILE='config.yml'
+CONFIG_FILE='/var/radio/config/config.yml'
 _cached_config = None
 TEMPLATE = '''\
+<!doctype html>
+<html>
 <head>
   <script>
   function send(item, state) {{
@@ -38,6 +40,7 @@ TEMPLATE = '''\
   <br>
   <button type="button" onclick="saveConfig();">Save</button>
 </body>
+</html>
 '''
 
 
@@ -102,7 +105,7 @@ def nexa(unit, state):
 
     unit = units[unit]
     remote = remotes[unit['remote']]
-    unit_code = protocol['unit_codes'][unit['i']-1]
+    unit_code = protocol['unit_codes'][unit['i']]
     state_code = {
         '1':   on_code,
         'on':  on_code,

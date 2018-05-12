@@ -7,7 +7,9 @@ Type=simple
 User=radio
 Group=radio
 WorkingDirectory=/home/radio/src/python/radioservice
-ExecStart=/home/radio/src/python/radioservice/venv/bin/python radio.py -D
+ExecStart=/home/radio/src/python/radioservice/venv/bin/python \
+  radio.py -D \
+  -c /var/radio/config/config.yml
 StandardOutput=syslog
 StandardError=syslog
 

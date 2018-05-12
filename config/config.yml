@@ -41,9 +41,23 @@ protocol:
     - 0x9
 units:
   kitchen_window:
+    label: Kitchen Window
+    remote: 1
+    i: 0
+  living_room_window:
+    label: Living Room Window Lights
+    remote: 1
+    i: 1
+  living_room_corner:
+    label: Living Room Paper Lamp
+    remote: 1
+    i: 2
+  hallway_lamp:
+    label: Hallway Lamp
+    remote: 2
+    i: 0
+  bedside_lamp:
+    label: Bedside Lamp
     remote: 2
     i: 1
-  living_room_window:
-    remote: 2
-    i: 2
 ...

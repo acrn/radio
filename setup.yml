@@ -27,7 +27,7 @@
         path: /etc/sudoers
         line: 'radio ALL=NOPASSWD: {{homedir}}/bin/radio'
 
-    - name: Create systemd socket
+    - name: Create systemd uwsgi socket
       copy:
         dest: /etc/systemd/system/radio-uwsgi.socket
         content: |
@@ -43,7 +43,7 @@
           [Install]
           WantedBy=sockets.target
 
-    - name: Create systemd service
+    - name: Create systemd uwsgi service
       copy:
         dest: /etc/systemd/system/radio-uwsgi.service
         content: |
@@ -53,8 +53,8 @@
 
           [Service]
           ExecStart={{homedir}}/venv/bin/uwsgi \
-                  --chdir {{homedir}} \
-                  --ini {{homedir}}/radio.ini \
+                  --chdir {{homedir}}/web \
+                  --ini {{homedir}}/web/radio.ini \
                   --socket {{socket}}
           User=radio
           Group=radio
@@ -63,6 +63,28 @@
           Type=notify
           StandardError=syslog
           NotifyAccess=all
+
+    - name: Create systemd service
+      copy:
+        dest: /etc/systemd/system/radio.service
+        content: |
+          [Unit]
+          Description=Radio service
+          After=syslog.target
+
+          [Service]
+          Type=simple
+          User=radio
+          Group=radio
+          WorkingDirectory={{homedir}}
+          ExecStart={{homedir}}/venv/bin/python \
+            {{homedir}}/service/radio.py -D \
+            -c {{homedir}}/config/config.yml
+          StandardOutput=syslog
+          StandardError=syslog
+
+          [Install]
+          WantedBy=multi-user.target
 
     - name: Create nginx.conf
       template:
@@ -84,18 +106,29 @@
       with_items:
         - python -m venv {{homedir}}/venv
         - "{{homedir}}/venv/bin/pip install -U pip"
-        - "{{homedir}}/venv/bin/pip install Flask uWSGI PyYAML"
+        - "{{homedir}}/venv/bin/pip install Flask uWSGI PyYAML pytz"
       when: not stat_venv.stat.exists
+
+    - name: Create folders
+      file:
+        path: "{{homedir}}/{{item}}"
+        state: directory
+      with_items:
+        - web
+        - service
+        - config
 
     - name: Create wsgi config file
       template:
-        src: config/radio.ini
-        dest: "{{homedir}}/radio.ini"
+        src: web/radio.ini
+        dest: "{{homedir}}/web/radio.ini"
 
     - name: Copy files
       copy:
         src: "{{item}}"
         dest: "{{homedir}}/{{item}}"
       with_items:
-        - bin/radio.py
-        - bin/wsgi.py
+        - web/radio.py
+        - web/wsgi.py
+        - service/radio.py
+        - config/config.yml
