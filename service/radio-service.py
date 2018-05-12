@@ -22,7 +22,7 @@ class Unit():
     def code(self, on=False):
         protocol = self.protocol
         return (self.remote_code |
-                protocol.unit_codes[self.i - 1] |
+                protocol.unit_codes[self.i] |
                 (protocol.on_code if on else protocol.off_code))
 
 
@@ -69,7 +69,7 @@ class State():
         for key, value in d['units'].items():
             remote = value['remote']
             units[key] = Unit(key,
-                              remotes[remote-1],
+                              remotes[remote],
                               value['i'],
                               protocol)
         self.units = units

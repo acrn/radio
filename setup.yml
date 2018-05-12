@@ -1,0 +1,101 @@
+- hosts: localhost
+  become: yes
+  tasks:
+
+    - name: Set vars
+      set_fact:
+        username: radio
+        homedir: /var/radio
+        socket: /var/run/uwsgi/radio.sock
+
+    - name: Install required packages
+      package:
+        name: "{{item}}"
+      with_items:
+        - gcc
+        - nginx-mainline
+        - python
+        - sudo
+
+    - name: Create user
+      user:
+        name: "{{username}}"
+        home: "{{homedir}}"
+
+    - name: Let user sudo the radio program for GPIO access
+      lineinfile:
+        path: /etc/sudoers
+        line: 'radio ALL=NOPASSWD: {{homedir}}/bin/radio'
+
+    - name: Create systemd socket
+      copy:
+        dest: /etc/systemd/system/radio-uwsgi.socket
+        content: |
+          [Unit]
+          Description=Socket for radio uWSGI app
+
+          [Socket]
+          ListenStream={{socket}}
+          SocketUser={{username}}
+          SocketGroup={{username}}
+          SocketMode=0666
+
+          [Install]
+          WantedBy=sockets.target
+
+    - name: Create systemd service
+      copy:
+        dest: /etc/systemd/system/radio-uwsgi.service
+        content: |
+          [Unit]
+          Description=radio uWSGI app
+          After=syslog.target
+
+          [Service]
+          ExecStart={{homedir}}/venv/bin/uwsgi \
+                  --chdir {{homedir}} \
+                  --ini {{homedir}}/radio.ini \
+                  --socket {{socket}}
+          User=radio
+          Group=radio
+          Restart=on-failure
+          KillSignal=SIGQUIT
+          Type=notify
+          StandardError=syslog
+          NotifyAccess=all
+
+    - name: Create nginx.conf
+      template:
+        src: nginx.conf
+        dest: /etc/nginx/nginx.conf
+
+- hosts: localhost
+  become: yes
+  become_user: radio
+  tasks:
+
+    - name: Check if virtualenv exists
+      stat:
+        path: "{{homedir}}/venv"
+      register: stat_venv
+
+    - name: Setup virtualenv
+      command: "{{item}}"
+      with_items:
+        - python -m venv {{homedir}}/venv
+        - "{{homedir}}/venv/bin/pip install -U pip"
+        - "{{homedir}}/venv/bin/pip install Flask uWSGI PyYAML"
+      when: not stat_venv.stat.exists
+
+    - name: Create wsgi config file
+      template:
+        src: config/radio.ini
+        dest: "{{homedir}}/radio.ini"
+
+    - name: Copy files
+      copy:
+        src: "{{item}}"
+        dest: "{{homedir}}/{{item}}"
+      with_items:
+        - bin/radio.py
+        - bin/wsgi.py
