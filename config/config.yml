@@ -35,12 +35,12 @@ schedule:
     events:
 
       - on: weekdays
-        turn_on:  '18:30'
-        turn_off: '23:00'
+        turn_on:  '18:30:20'
+        turn_off: '23:00:20'
 
       - on: weekends
-        turn_on:  '18:30'
-        turn_off: '23:30'
+        turn_on:  '18:30:20'
+        turn_off: '23:30:20'
 
   - unit: hallway_lamp
     events:

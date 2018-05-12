@@ -177,7 +177,7 @@ def daemonize(configfile, verbose=False):
                 except Exception as ex:
                     print('Event {}: {} failed'.format(unit_name, on))
                     print(ex, flush=True)
-                time.sleep(0.3)
+                time.sleep(1.3)
         last = now
         time.sleep(interval)
 
