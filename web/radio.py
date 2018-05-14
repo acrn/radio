@@ -2,6 +2,7 @@ import collections
 import datetime
 import json
 import os
+import re
 import subprocess
 import yaml
 
@@ -13,38 +14,47 @@ application = Flask(__name__)
 CONFIG_FILE='/var/radio/config/config.yml'
 _cached_config = None
 
-TEMPLATE = '''\
-<!doctype html>
-<html>
-<head>
-  <script src="/static/js.js"></script>
-  <link rel="stylesheet" type="text/css" href="/static/css.css"/>
-</head>
-<body>
-  <h1>Switches</h1>
-  <table>
-{0}
-  </table>
-  <a href="/config">Edit configuration file</a>
-</body>
-</html>
-'''
+strip_whitespace = lambda t: re.sub('^ *', '', t, flags=re.MULTILINE)
 
-CONFIG_TEMPLATE = '''\
-<!doctype html>
-<html>
-<head>
-  <script src="/static/js.js"></script>
-  <link rel="stylesheet" href="/static/css.css">
-</head>
-<body>
-  <h1>Config</h1>
-  <textarea id="configArea" rows="40" cols="80">{0}</textarea>
-  <br>
-  <button type="button" onclick="saveConfig();">Save</button>
-</body>
-</html>
-'''
+TEMPLATE = strip_whitespace('''\
+  <!doctype html>
+  <html>
+    <head>
+      <title>Switches</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <script src="/static/js.js"></script>
+      <link rel="stylesheet" type="text/css" href="/static/css.css"/>
+      <link rel="shortcut icon" type="image/png" href="/static/bulb_on_24.png"/>
+    </head>
+    <body>
+      <div id="app-container">
+        <h1>
+          Switches
+        </h1>
+        <table>
+          {0}
+        </table>
+        <a href="/config">
+          Edit configuration file
+        </a>
+      </div>
+    </body>
+  </html>''')
+
+CONFIG_TEMPLATE = strip_whitespace('''\
+  <!doctype html>
+  <html>
+    <head>
+      <script src="/static/js.js"></script>
+      <link rel="stylesheet" href="/static/css.css">
+    </head>
+    <body>
+      <h1>Config</h1>
+      <textarea id="configArea" rows="40" cols="80">{0}</textarea>
+      <br>
+      <button type="button" onclick="saveConfig();">Save</button>
+    </body>
+  </html>''')
 
 
 Config = collections.namedtuple('Config', [
@@ -133,6 +143,12 @@ def nexa(unit, state):
         'call': call,
         'output': output.decode('utf-8'),
         })
+
+@application.route('/config', methods=('GET',))
+def hello2():
+
+    return html_config(get_config())
+
 
 @application.route('/config', methods=('POST',))
 def post_config():
