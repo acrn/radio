@@ -115,6 +115,7 @@
         state: directory
       with_items:
         - web
+        - web/static
         - service
         - config
 
@@ -130,5 +131,7 @@
       with_items:
         - web/radio.py
         - web/wsgi.py
+        - web/static/css.css
+        - web/static/js.js
         - service/radio.py
         - config/config.yml

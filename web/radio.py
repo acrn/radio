@@ -6,37 +6,40 @@ import subprocess
 import yaml
 
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 
 application = Flask(__name__)
 
 CONFIG_FILE='/var/radio/config/config.yml'
 _cached_config = None
+
 TEMPLATE = '''\
 <!doctype html>
 <html>
 <head>
-  <script>
-  function send(item, state) {{
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.open("POST", "/nexa/" + item + "/" + state);
-    xmlhttp.send();
-  }}
-  function saveConfig() {{
-    var config = document.getElementById('configArea').value;
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.open("POST", "/config");
-    xmlhttp.send(config);
-  }}
-  </script>
+  <script src="/static/js.js"></script>
+  <link rel="stylesheet" type="text/css" href="/static/css.css"/>
 </head>
 <body>
   <h1>Switches</h1>
   <table>
 {0}
   </table>
+  <a href="/config">Edit configuration file</a>
+</body>
+</html>
+'''
+
+CONFIG_TEMPLATE = '''\
+<!doctype html>
+<html>
+<head>
+  <script src="/static/js.js"></script>
+  <link rel="stylesheet" href="/static/css.css">
+</head>
+<body>
   <h1>Config</h1>
-  <textarea id="configArea" rows="40" cols="80">{1}</textarea>
+  <textarea id="configArea" rows="40" cols="80">{0}</textarea>
   <br>
   <button type="button" onclick="saveConfig();">Save</button>
 </body>
@@ -79,15 +82,20 @@ def html(config):
               <tr>
                 <td>{0}</td>
                 <td>
-                  <button type="button" onclick="send('{1}', 'on');">On</button>
-                  <button type="button" onclick="send('{1}', 'off');">Off</button>
+                  <button class="on-button" type="button" onclick="send('{1}', 'on');">&#x1F31E</button>
+                </td>
+                <td>
+                  <button class="off-button" type="button" onclick="send('{1}', 'off');">&#x1F31D</button>
                 </td>
               </tr>'''.format(v.get('label', k), k)
 
     return TEMPLATE.format(
-            '\n'.join(tablerows(config.units)),
-            config.raw)
+            '\n'.join(tablerows(config.units)))
 
+def html_config(config):
+
+    return CONFIG_TEMPLATE.format(
+            config.raw)
 
 @application.route('/')
 def hello():
