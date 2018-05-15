@@ -57,30 +57,16 @@ CONFIG_TEMPLATE = strip_whitespace('''\
   </html>''')
 
 
-Config = collections.namedtuple('Config', [
-    'remotes',
-    'units',
-    'protocol',
-    'executable',
-    'raw',
-    'timestamp',
-    ])
-
-
 def get_config():
     global _cached_config
     now = datetime.datetime.now()
-    if _cached_config and (_cached_config.timestamp > os.stat(CONFIG_FILE).st_mtime):
+    if _cached_config and (_cached_config['timestamp'] > os.stat(CONFIG_FILE).st_mtime):
         return _cached_config
     with open(CONFIG_FILE) as f:
         raw = f.read()
     config = yaml.load(raw)
-    remotes = config['remotes']
-    units = config['units']
-    protocol = config['protocol']
-    executable = config['executable']
     timestamp = now.timestamp()
-    _cached_config = config = Config(remotes, units, protocol, executable, raw, timestamp)
+    _cached_config = config = dict(config, timestamp=timestamp, raw=raw)
     return config
 
 
@@ -100,12 +86,12 @@ def html(config):
               </tr>'''.format(v.get('label', k), k)
 
     return TEMPLATE.format(
-            '\n'.join(tablerows(config.units)))
+            '\n'.join(tablerows(config['units'])))
 
 def html_config(config):
 
     return CONFIG_TEMPLATE.format(
-            config.raw)
+            config['raw'])
 
 @application.route('/')
 def hello():
@@ -116,9 +102,9 @@ def hello():
 def nexa(unit, state):
 
     config = get_config()
-    remotes = config.remotes
-    units = config.units
-    protocol = config.protocol
+    remotes = config['remotes']
+    units = config['units']
+    protocol = config['protocol']
     on_code, off_code = protocol['on_code'], protocol['off_code']
 
     unit = units[unit]
@@ -134,7 +120,7 @@ def nexa(unit, state):
     code = remote | unit_code | state_code
     call = [
         'sudo',
-        config.executable,
+        config['executable'],
         'nexa',
         hex(code)]
     output = subprocess.check_output(call)
