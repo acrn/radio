@@ -1,22 +1,22 @@
-import collections
 import datetime
 import json
 import os
 import re
 import subprocess
+
+import flask
+import jinja2
 import yaml
 
 
-from flask import Flask, jsonify, request, Response
+application = flask.Flask(__name__)
 
-application = Flask(__name__)
-
-CONFIG_FILE='/var/radio/config/config.yml'
+CONFIG_FILE='../config/config.yml'
 _cached_config = None
 
 strip_whitespace = lambda t: re.sub('^ *', '', t, flags=re.MULTILINE)
 
-TEMPLATE = strip_whitespace('''\
+MAINPAGE_TEMPLATE = jinja2.Template(strip_whitespace('''\
   <!doctype html>
   <html>
     <head>
@@ -32,29 +32,54 @@ TEMPLATE = strip_whitespace('''\
           Switches
         </h1>
         <table>
-          {0}
+          {% for name, unit in units.items() %}
+            <tr>
+              <td>
+                <p>
+                  {{unit.label}}
+                </p>
+              </td>
+              <td>
+                <button class="on-button" type="button" onclick="send('{{name}}', 'on');">
+                  <img src="/static/bulb_on_24.png">
+                </button>
+              </td>
+              <td>
+                <button class="off-button" type="button" onclick="send('{{name}}', 'off');">
+                  <img src="/static/bulb_on_24.png">
+                </button>
+              </td>
+            </tr>
+          {% endfor %}
         </table>
         <a href="/config">
           Edit configuration file
         </a>
       </div>
     </body>
-  </html>''')
+  </html>'''))
 
-CONFIG_TEMPLATE = strip_whitespace('''\
+CONFIG_TEMPLATE = jinja2.Template(strip_whitespace('''\
   <!doctype html>
   <html>
     <head>
+      <title>Config</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <script src="/static/js.js"></script>
-      <link rel="stylesheet" href="/static/css.css">
+      <link rel="stylesheet" type="text/css" href="/static/css.css"/>
+      <link rel="shortcut icon" type="image/png" href="/static/bulb16.png"/>
     </head>
     <body>
-      <h1>Config</h1>
-      <textarea id="configArea" rows="40" cols="80">{0}</textarea>
-      <br>
-      <button type="button" onclick="saveConfig();">Save</button>
+      <div id="app-container">
+        <h1>Config</h1>
+        <textarea id="configArea" rows="40" cols="80">{{raw}}</textarea>
+        <br>
+        <button type="button" onclick="saveConfig();">
+          Save
+        </button>
+      </div>
     </body>
-  </html>''')
+  </html>'''))
 
 
 def get_config():
@@ -65,38 +90,18 @@ def get_config():
     with open(CONFIG_FILE) as f:
         raw = f.read()
     config = yaml.load(raw)
+    for name, unit in config['units'].items():
+        unit['label'] = unit.get('label', name)
     timestamp = now.timestamp()
     _cached_config = config = dict(config, timestamp=timestamp, raw=raw)
     return config
 
 
-def html(config):
-
-    def tablerows(units):
-        for k, v in sorted(units.items(), key=lambda k: k[1].get('label', k[0])):
-            yield '''
-              <tr>
-                <td>{0}</td>
-                <td>
-                  <button class="on-button" type="button" onclick="send('{1}', 'on');">&#x1F31E</button>
-                </td>
-                <td>
-                  <button class="off-button" type="button" onclick="send('{1}', 'off');">&#x1F31D</button>
-                </td>
-              </tr>'''.format(v.get('label', k), k)
-
-    return TEMPLATE.format(
-            '\n'.join(tablerows(config['units'])))
-
-def html_config(config):
-
-    return CONFIG_TEMPLATE.format(
-            config['raw'])
-
 @application.route('/')
-def hello():
+def mainpage():
 
-    return html(get_config())
+    return MAINPAGE_TEMPLATE.render(get_config())
+
 
 @application.route('/nexa/<unit>/<state>', methods=('POST',))
 def nexa(unit, state):
@@ -130,20 +135,21 @@ def nexa(unit, state):
         'output': output.decode('utf-8'),
         })
 
-@application.route('/config', methods=('GET',))
-def hello2():
 
-    return html_config(get_config())
+@application.route('/config', methods=('GET',))
+def config_get():
+
+    return CONFIG_TEMPLATE.render(get_config())
 
 
 @application.route('/config', methods=('POST',))
-def post_config():
+def config_post():
 
-    new_config = request.data
+    new_config = flask.request.data
     try:
         yaml.load(new_config)
         with open(CONFIG_FILE, 'wb') as f:
-            f.write(new_config);
+            f.write(new_config)
     except yaml.scanner.ScannerError as ex:
         return application.make_response((str(ex), 500))
     return json.dumps({'config': 'saved'})
