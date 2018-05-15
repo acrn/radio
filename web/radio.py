@@ -23,37 +23,34 @@ MAINPAGE_TEMPLATE = jinja2.Template(strip_whitespace('''\
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <script src="/static/js.js"></script>
       <link rel="stylesheet" type="text/css" href="/static/css.css"/>
-      <link rel="shortcut icon" type="image/png" href="/static/bulb_on_24.png"/>
+      <link rel="shortcut icon" type="image/png" href="/static/bulb16.png"/>
     </head>
     <body>
       <div id="app-container">
-        <h1>
-          Switches
-        </h1>
         <table>
           {% for name, unit in units.items() %}
             <tr>
+              <td>
+                <button class="on-button" type="button" onclick="send('{{name}}', 'on');">
+                  <img src="/static/sun.png" height="42" width="42">
+                </button>
+              </td>
               <td>
                 <p>
                   {{unit.label}}
                 </p>
               </td>
               <td>
-                <button class="on-button" type="button" onclick="send('{{name}}', 'on');">
-                  <img src="/static/bulb_on_24.png">
-                </button>
-              </td>
-              <td>
                 <button class="off-button" type="button" onclick="send('{{name}}', 'off');">
-                  <img src="/static/bulb_on_24.png">
+                  <img src="/static/moon.png" height="42" width="42">
                 </button>
               </td>
             </tr>
           {% endfor %}
         </table>
-        <a href="/config">
-          Edit configuration file
-        </a>
+        <div id="cog-div">
+          <a href="/config">&#x2699;</a>
+        </div>
       </div>
     </body>
   </html>'''))
