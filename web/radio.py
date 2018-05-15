@@ -12,7 +12,6 @@ import yaml
 application = flask.Flask(__name__)
 
 CONFIG_FILE='../config/config.yml'
-_cached_config = None
 
 strip_whitespace = lambda t: re.sub('^ *', '', t, flags=re.MULTILINE)
 
@@ -83,17 +82,27 @@ CONFIG_TEMPLATE = jinja2.Template(strip_whitespace('''\
 
 
 def get_config():
-    global _cached_config
-    now = datetime.datetime.now()
-    if _cached_config and (_cached_config['timestamp'] > os.stat(CONFIG_FILE).st_mtime):
-        return _cached_config
-    with open(CONFIG_FILE) as f:
-        raw = f.read()
+    try:
+        cached_config = application.cached_radio_config
+        if cached_config['timestamp'] > os.stat(CONFIG_FILE).st_mtime:
+            return cached_config
+    except AttributeError:
+        pass
+    timestamp = datetime.datetime.now().timestamp()
+    with open(CONFIG_FILE) as file_:
+        raw = file_.read()
     config = yaml.load(raw)
+    remotes = config['remotes']
+    protocol = config['protocol']
     for name, unit in config['units'].items():
         unit['label'] = unit.get('label', name)
-    timestamp = now.timestamp()
-    _cached_config = config = dict(config, timestamp=timestamp, raw=raw)
+        unit_code = protocol['unit_codes'][unit['i']]
+        remote = remotes[unit['remote']]
+        unit['on_code'] =  remote | unit_code | protocol['on_code']
+        unit['off_code'] = remote | unit_code | protocol['off_code']
+    application.cached_radio_config = config = dict(config,
+                                                    timestamp=timestamp,
+                                                    raw=raw)
     return config
 
 
@@ -107,22 +116,15 @@ def mainpage():
 def nexa(unit, state):
 
     config = get_config()
-    remotes = config['remotes']
-    units = config['units']
-    protocol = config['protocol']
-    on_code, off_code = protocol['on_code'], protocol['off_code']
-
-    unit = units[unit]
-    remote = remotes[unit['remote']]
-    unit_code = protocol['unit_codes'][unit['i']]
-    state_code = {
+    unit = config['units'][unit]
+    on_code =  unit['on_code']
+    off_code = unit['off_code']
+    code = {
         '1':   on_code,
         'on':  on_code,
         '0':   off_code,
         'off': off_code,
         }[state]
-
-    code = remote | unit_code | state_code
     call = [
         'sudo',
         config['executable'],
@@ -148,8 +150,10 @@ def config_post():
     new_config = flask.request.data
     try:
         yaml.load(new_config)
-        with open(CONFIG_FILE, 'wb') as f:
-            f.write(new_config)
+        with open(CONFIG_FILE, 'wb') as file_:
+            file_.write(new_config)
     except yaml.scanner.ScannerError as ex:
         return application.make_response((str(ex), 500))
     return json.dumps({'config': 'saved'})
+
+application.warmup = get_config
